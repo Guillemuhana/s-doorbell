@@ -53,6 +53,11 @@ app.get('/visit/:qrId', (req, res) => {
   res.sendFile(path.join(__dirname, 'visitor', 'index.html'));
 });
 
+// Root health check (Railway default)
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', service: 'S-Doorbell API' });
+});
+
 // Health check
 app.get('/health', async (req, res) => {
   try {
