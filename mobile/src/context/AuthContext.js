@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AuthContext = createContext(null);
 
-export const API_BASE = 'http://192.168.0.190:5000'; // IP local — cambiá por URL de producción al deployar
+export const API_BASE = 'https://s-doorbell-production.up.railway.app';
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
