@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>S-Doorbell — Timbre Digital</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 32px 24px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      text-align: center;
+    }
+    .logo { font-size: 28px; font-weight: 800; color: #1a1a2e; margin-bottom: 4px; }
+    .logo span { color: #4f46e5; }
+    .subtitle { font-size: 12px; color: #888; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 24px; }
+    .owner-photo {
+      width: 80px; height: 80px; border-radius: 50%;
+      object-fit: cover; margin: 0 auto 12px;
+      border: 3px solid #4f46e5;
+    }
+    .owner-placeholder {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: #e8e8f0; margin: 0 auto 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+    }
+    .owner-name { font-size: 20px; font-weight: 700; color: #1a1a2e; }
+    .owner-address { font-size: 13px; color: #666; margin-top: 4px; margin-bottom: 24px; }
+    .section-title { font-size: 13px; font-weight: 600; color: #444; margin-bottom: 12px; }
+
+    /* Grilla unidades */
+    .units-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .unit-btn {
+      padding: 12px 8px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      background: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: #333;
+    }
+    .unit-btn:hover { border-color: #4f46e5; color: #4f46e5; }
+    .unit-btn.selected { border-color: #4f46e5; background: #4f46e5; color: white; }
+
+    /* Input visitante */
+    .visitor-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 15px;
+      margin-bottom: 16px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .visitor-input:focus { border-color: #4f46e5; }
+
+    /* Botón principal */
+    .btn-ring {
+      width: 100%;
+      padding: 16px;
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-ring:hover { background: #3730a3; }
+    .btn-ring:active { transform: scale(0.98); }
+    .btn-ring:disabled { background: #a5a5a5; cursor: not-allowed; }
+
+    /* Estados */
+    .status {
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .status.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .status.success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .status.info { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .status.show { display: block; }
+
+    /* Loader geo */
+    .geo-loader {
+      display: none;
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 16px;
+    }
+    .geo-loader.show { display: block; }
+
+    /* Chat */
+    #chat-section { display: none; margin-top: 20px; }
+    #chat-section.show { display: block; }
+    .chat-header {
+      font-size: 13px;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .chat-messages {
+      height: 200px;
+      overflow-y: auto;
+      background: #f9f9f9;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .msg {
+      max-width: 80%;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .msg.visitor { background: #4f46e5; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .msg.owner { background: #e8e8f0; color: #1a1a2e; align-self: flex-start; border-bottom-left-radius: 4px; }
+    .msg-meta { font-size: 10px; opacity: 0.6; margin-top: 2px; }
+    .chat-input-row { display: flex; gap: 8px; }
+    .chat-input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 14px;
+      outline: none;
+    }
+    .chat-input:focus { border-color: #4f46e5; }
+    .btn-send {
+      padding: 10px 16px;
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-screen { padding: 40px; color: #888; }
+  </style>
+</head>
+<body>
+<div class="card" id="loading-screen">
+  <div class="logo">S<span>-</span>Doorbell</div>
+  <p style="margin-top:16px;color:#888;">Cargando...</p>
+</div>
+
+<div class="card" id="main-card" style="display:none;">
+  <div class="logo">S<span>-</span>Doorbell</div>
+  <div class="subtitle">Timbre Digital</div>
+
+  <div id="owner-photo-wrap">
+    <div class="owner-placeholder" id="owner-placeholder">🏠</div>
+    <img class="owner-photo" id="owner-photo" style="display:none;" alt="Propiedad" />
+  </div>
+  <div class="owner-name" id="owner-name">—</div>
+  <div class="owner-address" id="owner-address"></div>
+
+  <!-- Grilla de unidades (modo edificio) -->
+  <div id="units-section" style="display:none;">
+    <div class="section-title">Seleccioná tu departamento</div>
+    <div class="units-grid" id="units-grid"></div>
+  </div>
+
+  <!-- Nombre visitante -->
+  <input
+    class="visitor-input"
+    id="visitor-name"
+    type="text"
+    placeholder="Tu nombre (opcional)"
+    maxlength="80"
+  />
+
+  <!-- Estados -->
+  <div class="status info geo-loader" id="geo-loader">📍 Verificando tu ubicación...</div>
+  <div class="status" id="status-msg"></div>
+
+  <!-- Botón timbre -->
+  <button class="btn-ring" id="btn-ring" disabled>
+    🔔 Tocar timbre
+  </button>
+
+  <!-- Chat post-timbre -->
+  <div id="chat-section">
+    <div class="chat-header">💬 Chat con el dueño</div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chat-input" type="text" placeholder="Escribí un mensaje..." maxlength="300" />
+      <button class="btn-send" id="btn-send" title="Enviar">➤</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://achkhqmqwsyxnvqimzrk.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjaGtocW1xd3N5eG52cWltenJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODU2NTksImV4cCI6MjA5NDE2MTY1OX0.5gkc84hlcW5dFz7J7qsc9_XDIZsjdMx8r3E0RKH_Vfc';
+  const API_BASE = '';  // mismo origen
+
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Extraer qrId de la URL: /visit/:qrId
+  const qrId = window.location.pathname.split('/').filter(Boolean).pop();
+  let ownerData = null;
+  let selectedUnidadId = null;
+  let visitorCoords = null;
+  let currentEventoId = null;
+  let chatChannel = null;
+
+  const $ = id => document.getElementById(id);
+
+  function showStatus(msg, type = 'error') {
+    const el = $('status-msg');
+    el.textContent = msg;
+    el.className = `status ${type} show`;
+  }
+  function hideStatus() {
+    const el = $('status-msg');
+    el.className = 'status';
+  }
+
+  // ── 1. Cargar info del dueño ───────────────────────────────────────────────
+  async function loadOwner() {
+    try {
+      const res = await fetch(`/api/visitor/${qrId}`);
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message || 'QR inválido');
+
+      ownerData = json;
+      const { owner, tipo, unidades } = json;
+
+      $('owner-name').textContent = `${owner.nombre} ${owner.apellido}`;
+      $('owner-address').textContent = owner.direccion || '';
+
+      if (owner.foto_fachada) {
+        $('owner-photo').src = owner.foto_fachada;
+        $('owner-photo').style.display = 'block';
+        $('owner-placeholder').style.display = 'none';
+      }
+
+      // Modo edificio: mostrar grilla
+      if (tipo === 'edificio' && unidades.length) {
+        $('units-section').style.display = 'block';
+        renderUnits(unidades);
+      }
+
+      $('loading-screen').style.display = 'none';
+      $('main-card').style.display = 'block';
+
+      requestGeo();
+    } catch (e) {
+      document.body.innerHTML = `<div class="card"><p style="color:#dc2626;font-size:16px;">❌ ${e.message}</p></div>`;
+    }
+  }
+
+  // ── 2. Grilla de unidades ──────────────────────────────────────────────────
+  function renderUnits(unidades) {
+    const grid = $('units-grid');
+    unidades.forEach(u => {
+      const btn = document.createElement('button');
+      btn.className = 'unit-btn';
+      btn.textContent = u.nombre;
+      btn.onclick = () => {
+        document.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedUnidadId = u.id;
+        tryEnableRing();
+      };
+      grid.appendChild(btn);
+    });
+  }
+
+  // ── 3. Geolocalización ────────────────────────────────────────────────────
+  function requestGeo() {
+    const loader = $('geo-loader');
+    loader.classList.add('show');
+
+    if (!navigator.geolocation) {
+      loader.classList.remove('show');
+      tryEnableRing();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        visitorCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        loader.classList.remove('show');
+        tryEnableRing();
+      },
+      () => {
+        loader.classList.remove('show');
+        showStatus('No se pudo obtener tu ubicación. Si la propiedad requiere verificación, el timbre puede ser bloqueado.', 'info');
+        tryEnableRing();
+      },
+      { timeout: 8000, enableHighAccuracy: true }
+    );
+  }
+
+  function tryEnableRing() {
+    const isEdificio = ownerData?.tipo === 'edificio';
+    const unidadOk = !isEdificio || selectedUnidadId;
+    $('btn-ring').disabled = !unidadOk;
+  }
+
+  // ── 4. Tocar timbre ───────────────────────────────────────────────────────
+  $('btn-ring').addEventListener('click', async () => {
+    hideStatus();
+    const btn = $('btn-ring');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Enviando...';
+
+    const body = {
+      visitor_name: $('visitor-name').value.trim() || null,
+      visitor_lat: visitorCoords?.lat ?? null,
+      visitor_lng: visitorCoords?.lng ?? null,
+      unidad_id: selectedUnidadId || null,
+    };
+
+    try {
+      const res = await fetch(`/api/visitor/${qrId}/ring`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+
+      if (!json.success) {
+        showStatus(json.message, 'error');
+        btn.innerHTML = '🔔 Tocar timbre';
+        tryEnableRing();
+        return;
+      }
+
+      currentEventoId = json.evento_id;
+      btn.innerHTML = '✅ ¡Timbre enviado!';
+      showStatus('¡Tu mensaje llegó! Podés chatear mientras esperás.', 'success');
+      openChat(currentEventoId);
+    } catch (e) {
+      showStatus('Error de conexión. Intentá de nuevo.', 'error');
+      btn.innerHTML = '🔔 Tocar timbre';
+      tryEnableRing();
+    }
+  });
+
+  // ── 5. Chat Realtime ──────────────────────────────────────────────────────
+  function openChat(eventoId) {
+    $('chat-section').classList.add('show');
+
+    // Suscribir a nuevos mensajes
+    chatChannel = sb.channel(`chat:${eventoId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'mensajes',
+        filter: `evento_id=eq.${eventoId}`,
+      }, payload => {
+        appendMessage(payload.new);
+      })
+      .subscribe();
+
+    // Cargar mensajes existentes
+    sb.from('mensajes')
+      .select('*')
+      .eq('evento_id', eventoId)
+      .order('created_at')
+      .then(({ data }) => (data || []).forEach(appendMessage));
+
+    $('btn-send').addEventListener('click', sendMessage);
+    $('chat-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  }
+
+  function appendMessage(msg) {
+    const wrap = document.createElement('div');
+    wrap.className = `msg ${msg.sender}`;
+    const time = new Date(msg.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    wrap.innerHTML = `${escapeHtml(msg.texto)}<div class="msg-meta">${time}</div>`;
+    $('chat-messages').appendChild(wrap);
+    $('chat-messages').scrollTop = $('chat-messages').scrollHeight;
+  }
+
+  async function sendMessage() {
+    const input = $('chat-input');
+    const texto = input.value.trim();
+    if (!texto || !currentEventoId) return;
+    input.value = '';
+
+    await sb.from('mensajes').insert({
+      evento_id: currentEventoId,
+      sender: 'visitor',
+      texto,
+    });
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  if (!qrId || qrId === 'visit') {
+    document.body.innerHTML = '<div class="card"><p style="color:#dc2626;">QR inválido.</p></div>';
+  } else {
+    loadOwner();
+  }
+</script>
+</body>
+</html>

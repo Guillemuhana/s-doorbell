@@ -1,0 +1,65 @@
+{
+  "expo": {
+    "name": "S-Doorbell",
+    "slug": "s-doorbell",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logoIcono.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/logoCompleto.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.sdoorbell.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Necesitamos tu ubicación para configurar el geo anti-spam del timbre."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logoIcono.png",
+        "backgroundColor": "#4f46e5"
+      },
+      "package": "com.sdoorbell.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/logoIcono.png",
+          "color": "#4f46e5",
+          "sounds": [],
+          "androidMode": "default",
+          "androidCollapsedTitle": "S-Doorbell"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Necesitamos acceso a tus fotos para subir la imagen de tu propiedad.",
+          "cameraPermission": "Necesitamos acceso a la cámara para fotografiar tu propiedad."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Necesitamos tu ubicación para configurar el geo anti-spam."
+        }
+      ]
+    ],
+    "scheme": "sdoorbell",
+    "extra": {
+      "API_BASE": "http://localhost:5000"
+    }
+  }
+}
