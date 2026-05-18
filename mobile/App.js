@@ -18,6 +18,8 @@ import UnidadesScreen from './src/screens/UnidadesScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import HistorialScreen from './src/screens/HistorialScreen';
 import FotoFachadaScreen from './src/screens/FotoFachadaScreen';
+import ResidenteJoinScreen from './src/screens/ResidenteJoinScreen';
+import OlvidePasswordScreen from './src/screens/OlvidePasswordScreen';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -86,6 +88,16 @@ function RootNavigator() {
               name="CambiarPassword"
               component={CambiarPasswordScreen}
               options={{ title: 'Nueva contraseña', headerBackVisible: false }}
+            />
+            <Stack.Screen
+              name="ResidenteJoin"
+              component={ResidenteJoinScreen}
+              options={{ title: 'Unirme como residente' }}
+            />
+            <Stack.Screen
+              name="OlvidePassword"
+              component={OlvidePasswordScreen}
+              options={{ title: 'Recuperar contraseña' }}
             />
           </>
         ) : usuario?.must_change_password ? (

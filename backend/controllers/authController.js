@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const supabase = require('../config/supabase');
 const qrService = require('../services/qrService');
+const emailService = require('../services/emailService');
 
 const generateToken = (userId) =>
   jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -75,7 +76,7 @@ exports.me = async (req, res, next) => {
   try {
     const { data: usuario, error } = await supabase
       .from('usuarios')
-      .select('id, nombre, apellido, email, telefono, direccion, foto_fachada, qr_id, qr_image, push_token, is_active, last_login, created_at')
+      .select('id, nombre, apellido, email, telefono, direccion, foto_fachada, qr_id, qr_image, push_token, is_active, last_login, created_at, must_change_password, tipo, lat, lng')
       .eq('id', req.userId)
       .single();
 
@@ -83,6 +84,41 @@ exports.me = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
 
     res.json({ success: true, usuario });
+  } catch (err) { next(err); }
+};
+
+// POST /api/auth/forgot-password  (público)
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email)
+      return res.status(400).json({ success: false, message: 'Email requerido' });
+
+    const { data: usuario } = await supabase
+      .from('usuarios')
+      .select('id, nombre, email, is_active')
+      .eq('email', email.toLowerCase().trim())
+      .single();
+
+    // Siempre responder igual para no revelar si el email existe
+    if (!usuario || !usuario.is_active) {
+      return res.json({ success: true, message: 'Si el email existe, recibirás las instrucciones en breve.' });
+    }
+
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    const temp_password = `SD-${code}`;
+
+    const password_hash = await bcrypt.hash(temp_password, 12);
+    await supabase
+      .from('usuarios')
+      .update({ password_hash, must_change_password: true })
+      .eq('id', usuario.id);
+
+    await emailService.sendPasswordReset(usuario.email, usuario.nombre, temp_password);
+
+    res.json({ success: true, message: 'Si el email existe, recibirás las instrucciones en breve.' });
   } catch (err) { next(err); }
 };
 

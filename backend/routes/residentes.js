@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
-const { getResidentes, crearResidente, eliminarResidente } = require('../controllers/residenteController');
+const { joinResidente, getResidentes, crearResidente, eliminarResidente } = require('../controllers/residenteController');
+
+// Público — el residente se registra con el código del dueño
+router.post('/join', joinResidente);
 
 router.use(protect);
 

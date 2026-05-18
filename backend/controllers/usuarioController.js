@@ -11,7 +11,7 @@ exports.getUsuario = async (req, res, next) => {
 
     const { data, error } = await supabase
       .from('usuarios')
-      .select('id, nombre, apellido, email, telefono, direccion, foto_fachada, qr_id, qr_image, push_token, is_active, last_login, created_at, updated_at')
+      .select('id, nombre, apellido, email, telefono, direccion, foto_fachada, qr_id, qr_image, push_token, is_active, last_login, created_at, updated_at, must_change_password, tipo, lat, lng')
       .eq('id', req.params.id)
       .single();
 

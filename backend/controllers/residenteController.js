@@ -1,5 +1,46 @@
 const supabase = require('../config/supabase');
 
+// POST /api/residentes/join  (público — sin auth)
+exports.joinResidente = async (req, res, next) => {
+  try {
+    const { qr_id, nombre, push_token } = req.body;
+    if (!qr_id || !nombre || !push_token)
+      return res.status(400).json({ success: false, message: 'qr_id, nombre y push_token son requeridos' });
+
+    const { data: owner } = await supabase
+      .from('usuarios')
+      .select('id')
+      .eq('qr_id', qr_id)
+      .eq('is_active', true)
+      .single();
+
+    if (!owner)
+      return res.status(404).json({ success: false, message: 'Código de acceso inválido' });
+
+    // Si ya existe un residente con ese push_token para este dueño, actualizar nombre
+    const { data: existing } = await supabase
+      .from('residentes')
+      .select('id')
+      .eq('usuario_id', owner.id)
+      .eq('push_token', push_token)
+      .single();
+
+    if (existing) {
+      await supabase.from('residentes').update({ nombre, is_active: true }).eq('id', existing.id);
+      return res.json({ success: true, message: 'Registro actualizado' });
+    }
+
+    await supabase.from('residentes').insert({
+      usuario_id: owner.id,
+      nombre,
+      push_token,
+      is_active: true,
+    });
+
+    res.status(201).json({ success: true, message: '¡Te registraste como residente!' });
+  } catch (err) { next(err); }
+};
+
 // GET /api/residentes/:userId
 exports.getResidentes = async (req, res, next) => {
   try {

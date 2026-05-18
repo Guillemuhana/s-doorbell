@@ -70,6 +70,20 @@ export default function LoginScreen({ navigation }) {
           >
             {loading ? <ActivityIndicator color="white" /> : <Text style={styles.btnLoginText}>Ingresar</Text>}
           </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate('OlvidePassword')}
+            style={styles.btnResidente}
+          >
+            <Text style={styles.btnResidenteText}>Olvidé mi contraseña</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ResidenteJoin')}
+            style={styles.btnResidente}
+          >
+            <Text style={styles.btnResidenteText}>Soy residente · unirme a una propiedad</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -91,4 +105,6 @@ const styles = StyleSheet.create({
   btnLogin: { backgroundColor: '#4f46e5', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 24 },
   btnDisabled: { backgroundColor: '#a5a5a5' },
   btnLoginText: { color: 'white', fontSize: 17, fontWeight: '700' },
+  btnResidente: { alignItems: 'center', marginTop: 16 },
+  btnResidenteText: { color: '#4f46e5', fontSize: 13, fontWeight: '600' },
 });

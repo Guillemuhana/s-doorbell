@@ -6,14 +6,49 @@ import {
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import QRCard from '../components/QRCard';
+import { useAuth, API_BASE } from '../context/AuthContext';
 
 const logoIcono = require('../../assets/logoIcono.png');
 const logoCompleto = require('../../assets/logoCompleto.png');
 
 export default function QRViewerScreen({ route }) {
-  const { visitorUrl, qrId } = route.params;
+  const { visitorUrl: initialUrl } = route.params;
+  const { token, usuario, updateUsuario } = useAuth();
   const cardRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [visitorUrl, setVisitorUrl] = useState(initialUrl);
+
+  const handleRegenerate = () => {
+    Alert.alert(
+      'Regenerar QR',
+      'El QR actual dejará de funcionar y se creará uno nuevo. ¿Continuás?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Regenerar', style: 'destructive',
+          onPress: async () => {
+            setRegenerating(true);
+            try {
+              const res = await fetch(`${API_BASE}/api/usuarios/${usuario.id}/regenerar-qr`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const json = await res.json();
+              if (!json.success) throw new Error(json.message);
+              setVisitorUrl(json.visitor_url);
+              updateUsuario({ qr_id: json.qr_id, qr_image: json.qr_image });
+              Alert.alert('¡Listo!', 'Tu QR fue renovado. El anterior ya no funciona.');
+            } catch (e) {
+              Alert.alert('Error', e.message);
+            } finally {
+              setRegenerating(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -72,6 +107,20 @@ export default function QRViewerScreen({ route }) {
         <Text style={styles.hint}>
           La tarjeta se guardará como imagen PNG en tu galería o podrás compartirla directamente.
         </Text>
+
+        <TouchableOpacity
+          style={[styles.btnRegenerate, regenerating && styles.btnDisabled]}
+          onPress={handleRegenerate}
+          disabled={regenerating}
+          activeOpacity={0.8}
+        >
+          {regenerating
+            ? <ActivityIndicator color="#dc2626" />
+            : <Text style={styles.btnRegenerateText}>🔄 Regenerar QR</Text>}
+        </TouchableOpacity>
+        <Text style={styles.hintDanger}>
+          Úsalo solo si creés que alguien está abusando de tu timbre.
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -101,4 +150,16 @@ const styles = StyleSheet.create({
   btnDisabled: { backgroundColor: '#a5a5a5' },
   btnText: { color: 'white', fontSize: 17, fontWeight: '700' },
   hint: { fontSize: 12, color: '#999', textAlign: 'center', lineHeight: 18 },
+  btnRegenerate: {
+    borderWidth: 1.5,
+    borderColor: '#dc2626',
+    paddingVertical: 14,
+    paddingHorizontal: 48,
+    borderRadius: 12,
+    marginTop: 24,
+    width: '100%',
+    alignItems: 'center',
+  },
+  btnRegenerateText: { color: '#dc2626', fontSize: 15, fontWeight: '700' },
+  hintDanger: { fontSize: 11, color: '#dc2626', textAlign: 'center', marginTop: 8, opacity: 0.7 },
 });
